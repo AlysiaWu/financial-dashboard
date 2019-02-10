@@ -1,5 +1,4 @@
 node_modules/
 dist/
-config/token.json
-config/sandbox.json
-config/development.json
+config/
+!config/default.json
