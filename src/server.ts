@@ -1,8 +1,9 @@
 import bodyParser from "body-parser";
 import express from "express";
 
+import { config } from "./config";
 import { getTransactionsFor30Days } from "./index";
-import { client, env } from "./plaidClient";
+import { client } from "./plaidClient";
 
 // We store the access_token in memory - in production, store it in a secure
 // persistent data store
@@ -17,7 +18,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", (req, resp) => resp.render("../pages/index", {
-  env,
+  env: config.plaid.env,
   publicKey: process.env.PLAID_PUBLIC_KEY,
 }));
 

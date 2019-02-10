@@ -1,0 +1,8 @@
+{
+    "plaid": {
+        "clientId": "xxx",
+        "publicKey": "xxx",
+        "secret": "xxx",
+        "env": "sandbox"
+    }
+}

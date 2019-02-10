@@ -13,5 +13,5 @@ npm install && npm run build
 To run the application:
 
 ```
-./start.sh <client id> <public key> <secret> [sandbox development]
+npm start
 ```

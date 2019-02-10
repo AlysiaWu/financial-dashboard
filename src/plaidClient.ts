@@ -1,14 +1,17 @@
+import { config } from "./config";
+
 import * as plaid from "plaid";
 
-export const env = process.env.PLAID_ENV;
+export const plaidEnv = config.plaid.env === "development" ? plaid.environments.development :
+    config.plaid.env === "production" ? plaid.environments.production :
+    plaid.environments.sandbox;
 
-export const plaidEnv = env === "development" ? plaid.environments.development :
-            env === "production" ? plaid.environments.production :
-            plaid.environments.sandbox;
+// tslint:disable-next-line:no-console
+console.dir(config);
 
 export const client = new plaid.Client(
-    process.env.PLAID_CLIENT_ID || "",
-    process.env.PLAID_SECRET || "",
-    process.env.PLAID_PUBLIC_KEY || "",
+    config.plaid.clientId || "",
+    config.plaid.secret || "",
+    config.plaid.publicKey || "",
     plaidEnv,
 );
