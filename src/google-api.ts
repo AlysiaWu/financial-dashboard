@@ -8,12 +8,12 @@ const logger = debug("google");
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.readonly",
 ];
 
 const TOKEN_PATH = "./config/token.json";
-const CRED_PATH = "./config/credentials.json";
+const CRED_PATH = "./config/client_secret.json";
 
 interface ICredentials {
     installed: {
@@ -28,8 +28,14 @@ interface IFile {
     name: string;
 }
 
+interface ISheetClient {
+    getContent: (sheetId: string, range?: string) => Promise<string[]>;
+    getSheets: (query?: string) => Promise<IFile[]>;
+    writeContent: (spreadsheetId: string, range: string, values: string[][]) => Promise<boolean>;
+}
+
 // Load client secrets from a local file.
-export function getClient(): Promise<any> {
+export function getClient(): Promise<ISheetClient> {
     return new Promise((resolve, reject) => {
         fs.readFile(CRED_PATH, "utf8", (err, content) => {
             if (err) {
@@ -37,7 +43,11 @@ export function getClient(): Promise<any> {
                 reject(err);
             }
             // Authorize a client with credentials, then call the Google Sheets API.
-            resolve(authorize(JSON.parse(content)));
+            const credObj = JSON.parse(content);
+            authorize(credObj).then((oAuth2Client) => {
+                const client = clientFactory(oAuth2Client);
+                resolve(client);
+            });
         });
     });
 }
@@ -48,17 +58,17 @@ export function getClient(): Promise<any> {
  */
 function authorize(credentials: ICredentials): Promise<OAuth2Client> {
     const {client_secret, client_id, redirect_uris} = credentials.installed;
-    const oAuth2Client = new google.auth.OAuth2(
-        client_id, client_secret, redirect_uris[0]);
+    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
     return new Promise((resolve, reject) => {
         // Check if we have previously stored a token.
         fs.readFile(TOKEN_PATH, "utf8", (err, token) => {
             if (err) {
-                resolve(getNewToken(oAuth2Client));
+                getNewToken(oAuth2Client).then(resolve);
+            } else {
+                oAuth2Client.setCredentials(JSON.parse(token));
+                resolve(oAuth2Client);
             }
-            oAuth2Client.setCredentials(JSON.parse(token));
-            resolve(oAuth2Client);
         });
     });
 }
@@ -68,17 +78,19 @@ function authorize(credentials: ICredentials): Promise<OAuth2Client> {
  * execute the given callback with the authorized OAuth2 client.
  */
 function getNewToken(oAuth2Client: OAuth2Client): Promise<OAuth2Client> {
-  const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: "offline",
-    scope: SCOPES,
-  });
-  logger("Authorize this app by visiting this url:", authUrl);
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
+
   return new Promise((resolve, reject) => {
-      rl.question("Enter the code from that page here: ", (code) => {
+    const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: "offline",
+        scope: SCOPES,
+    });
+    logger("Authorize this app by visiting this url:", authUrl);
+
+    rl.question("Enter the code from that page here: ", (code: string) => {
         rl.close();
         oAuth2Client.getToken({code}, (err, token) => {
           if (err) {
@@ -102,16 +114,28 @@ function getNewToken(oAuth2Client: OAuth2Client): Promise<OAuth2Client> {
   });
 }
 
+function clientFactory(auth: OAuth2Client): ISheetClient {
+    return {
+        getContent: (sheetId, range?) => getContent(auth, sheetId, range),
+        getSheets: (query?) => getSheets(auth, query),
+        writeContent: (spreadsheetId, range, values) => writeContent(auth, spreadsheetId, range, values),
+    };
+}
+
 /**
  * Lists the names and IDs of up to 10 files.
  */
-export function listFiles(auth: OAuth2Client, q?: string): Promise<IFile[]> {
+function getSheets(auth: OAuth2Client, query?: string): Promise<IFile[]> {
+    const nameQuery = query ? `name contains '${query}' and` : "";
+    const q = `${nameQuery} mimeType = 'application/vnd.google-apps.spreadsheet'`;
+
     const drive = google.drive({version: "v3", auth});
+
     return new Promise((resolve, reject) => {
         drive.files.list({
             fields: "nextPageToken, files(id, name)",
             pageSize: 20,
-            q: q || "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'",
+            q,
         }, async (err, res) => {
             if (err) {
                 logger("The API returned an error: " + err);
@@ -132,11 +156,11 @@ export function listFiles(auth: OAuth2Client, q?: string): Promise<IFile[]> {
     });
 }
 
-export function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<string[]> {
+function getContent(auth: OAuth2Client, spreadsheetId: string, range = "Sheet1!A1:A1"): Promise<string[]> {
   const sheets = google.sheets({version: "v4", auth});
   return new Promise((resolve, reject) => {
       sheets.spreadsheets.values.get({
-        range: "Sheet1!A1:F7",
+        range,
         spreadsheetId,
       }, (err, res) => {
         if (err) {
@@ -151,4 +175,26 @@ export function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<s
         }
       });
   });
+}
+
+function writeContent(auth: OAuth2Client, spreadsheetId: string, range: string, values: string[][]): Promise<boolean> {
+    const sheets = google.sheets({version: "v4", auth});
+    return new Promise((resolve, reject) => {
+        sheets.spreadsheets.values.append({
+            range,
+            requestBody: {
+                values,
+            },
+            spreadsheetId,
+            valueInputOption: "USER_ENTERED",
+        }, (err) => {
+            if (err) {
+                logger(err);
+                reject(err);
+            } else {
+                logger("write complete");
+                resolve(true);
+            }
+        });
+    });
 }
