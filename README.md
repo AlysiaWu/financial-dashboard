@@ -15,3 +15,9 @@ To run the application:
 ```
 npm start
 ```
+
+To run with debug logs:
+
+```
+DEBUG="google" npm start
+```
