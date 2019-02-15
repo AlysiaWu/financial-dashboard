@@ -1,6 +1,6 @@
 import debug from "debug";
 import fs from "fs";
-import { OAuth2Client } from "google-auth-library";
+import { Credentials, OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import readline from "readline";
 
@@ -19,11 +19,20 @@ interface ICredentials {
 
 // Load client secrets from a local file.
 export async function getClient(scopes: string[]): Promise<OAuth2Client> {
+    let token: Credentials | undefined | null;
+
     const clientSecret = await readClientSecret();
     try {
-        return authorize(clientSecret);
+        token = await readToken();
     } catch ( err ) {
-        return getNewToken(scopes, clientSecret);
+        token = await getNewToken(scopes, clientSecret);
+    }
+    if (token) {
+        const oAuth2Client = clientFromCredentials(clientSecret);
+        oAuth2Client.setCredentials(token);
+        return oAuth2Client;
+    } else {
+        throw(new Error("Unable to retrieve token"));
     }
 }
 
@@ -50,7 +59,7 @@ const clientFromCredentials = (credentials: ICredentials): OAuth2Client => {
  * Create an OAuth2 client with the given credentials, and then execute the
  * given callback function.
  */
-const authorize = (credentials: ICredentials): Promise<OAuth2Client> => {
+const readToken = (): Promise<Credentials> => {
     return new Promise((resolve, reject) => {
         // Check if we have previously stored a token.
         fs.readFile(TOKEN_PATH, "utf8", (err, token) => {
@@ -58,9 +67,8 @@ const authorize = (credentials: ICredentials): Promise<OAuth2Client> => {
                 logger("Token not found, generating new token");
                 reject(err);
             } else {
-                const oAuth2Client = clientFromCredentials(credentials);
-                oAuth2Client.setCredentials(JSON.parse(token));
-                resolve(oAuth2Client);
+                const tokenObj = JSON.parse(token);
+                resolve(tokenObj);
             }
         });
     });
@@ -70,7 +78,7 @@ const authorize = (credentials: ICredentials): Promise<OAuth2Client> => {
  * Get and store new token after prompting for user authorization, and then
  * execute the given callback with the authorized OAuth2 client.
  */
-const getNewToken = (scope: string[], credentials: ICredentials): Promise<OAuth2Client> => {
+const getNewToken = (scope: string[], credentials: ICredentials): Promise<Credentials | null | undefined> => {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -82,27 +90,27 @@ const getNewToken = (scope: string[], credentials: ICredentials): Promise<OAuth2
         access_type: "offline",
         scope,
     });
-    logger("Authorize this app by visiting this url:", authUrl);
+    // tslint:disable-next-line:no-console
+    console.log("Authorize this app by visiting this url:", authUrl);
 
     rl.question("Enter the code from that page here: ", (code: string) => {
         rl.close();
         oAuth2Client.getToken({code}, (err, token) => {
-          if (err) {
-              logger("Error while trying to retrieve access token", err);
-              reject(err);
-          }
-          if (token) {
-              oAuth2Client.setCredentials(token);
-              // Store the token to disk for later program executions
-              fs.writeFile(TOKEN_PATH, JSON.stringify(token), (tokenErr) => {
+            if (err) {
+                logger("Error while trying to retrieve access token", err);
+                reject(err);
+            }
+            if (token) {
+                // Store the token to disk for later program executions
+                fs.writeFile(TOKEN_PATH, JSON.stringify(token), (tokenErr) => {
                 if (tokenErr) {
                     logger(tokenErr);
                     reject(tokenErr);
                 }
                 logger("Token stored to", TOKEN_PATH);
-              });
-              resolve(oAuth2Client);
-          }
+                });
+            }
+            resolve(token);
         });
       });
   });

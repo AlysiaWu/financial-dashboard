@@ -1,11 +1,17 @@
 import { SandboxPublicTokenCreateResponse, TokenResponse } from "plaid";
 import { client } from "./plaidClient";
 
-import { getClient } from "./google-api";
+import { clientFactory } from "./google-api";
+import { getClient } from "./google-client";
 
 import moment from "moment";
 
 // tslint:disable:no-console
+
+const SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.readonly",
+];
 
 const getAccessToken = async (resp: SandboxPublicTokenCreateResponse) => {
     const token = await client.exchangePublicToken(resp.public_token);
@@ -52,7 +58,8 @@ const main = async () => {
         ]);
         console.dir(accounts, {depth: null});
 
-        const gClient = await getClient();
+        const oAuthClient = await getClient(SCOPES);
+        const gClient = clientFactory(oAuthClient);
         const files = await gClient.getSheets("Financial Dashboard");
         if (files.length === 1) {
             const sheetId = files[0].id;
