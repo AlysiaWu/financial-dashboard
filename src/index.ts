@@ -1,10 +1,9 @@
-import { SandboxPublicTokenCreateResponse, TokenResponse } from "plaid";
-import { client } from "./plaidClient";
+import moment from "moment";
+
+import { clientFactory as getPlaidClient } from "./lib/plaid-client";
 
 import { getClient } from "./lib/google-client";
 import { clientFactory } from "./lib/google-sheet-api";
-
-import moment from "moment";
 
 // tslint:disable:no-console
 
@@ -13,43 +12,16 @@ const SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
 ];
 
-const getAccessToken = async (resp: SandboxPublicTokenCreateResponse) => {
-    const token = await client.exchangePublicToken(resp.public_token);
-    return token.access_token;
-};
-
-const getItem = async (accessToken: string) => {
-    const item = await client.getItem(accessToken);
-    console.dir(item);
-    return accessToken;
-};
-
-const getAccounts = (accessToken: string) => client.getAccounts(accessToken);
-
-const getTransactions = (startDate: string, endDate: string) => (accessToken: string) =>
-    client.getTransactions(accessToken, startDate, endDate, {
-        count: 250,
-        offset: 0,
-    });
-
-const plaidDate = "YYYY-MM-DD";
-const now = moment();
-const thirtyDaysAgo = now.subtract(30, "days").format(plaidDate);
-const today = now.format(plaidDate);
-
-export const getTransactionsFor30Days = getTransactions(thirtyDaysAgo, today);
-
 const main = async () => {
     try {
-        const token = await client.createPublicToken("access-development-834bb25a-091e-46d5-adee-8d658a5c772c");
-        const accessToken = await getAccessToken(token);
+        const plaid = await getPlaidClient("access-development-834bb25a-091e-46d5-adee-8d658a5c772c");
 
-        // const results = await getItem(accessToken);
-        // const results = await getTransactionsFor30Days(accessToken);
+        // const results = await plaid.getItem(accessToken);
+        // const results = await plaid.getTransactionsFor30Days(accessToken);
 
-        const results = await getAccounts(accessToken);
+        const results = await plaid.getAccounts();
         const accounts = results.accounts.map((acct) => [
-            today,
+            moment().format("YYYY-MM-DD"),
             results.item.institution_id,
             acct.account_id,
             acct.name || "",

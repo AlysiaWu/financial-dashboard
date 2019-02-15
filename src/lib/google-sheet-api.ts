@@ -9,24 +9,18 @@ interface IFile {
     name: string;
 }
 
-interface ISheetClient {
-    getContent: (sheetId: string, range?: string) => Promise<string[]>;
-    getSheets: (query?: string) => Promise<IFile[]>;
-    writeContent: (spreadsheetId: string, range: string, values: string[][]) => Promise<boolean>;
-}
-
-export function clientFactory(auth: OAuth2Client): ISheetClient {
+export function clientFactory(auth: OAuth2Client) {
     return {
-        getContent: (sheetId, range?) => getContent(auth, sheetId, range),
-        getSheets: (query?) => getSheets(auth, query),
-        writeContent: (spreadsheetId, range, values) => writeContent(auth, spreadsheetId, range, values),
+        getContent: getContent(auth),
+        getSheets: getSheets(auth),
+        writeContent: writeContent(auth),
     };
 }
 
 /**
  * Lists the names and IDs of up to 10 files.
  */
-function getSheets(auth: OAuth2Client, query?: string): Promise<IFile[]> {
+const getSheets = (auth: OAuth2Client) => (query?: string): Promise<IFile[]> => {
     const nameQuery = query ? `name contains '${query}' and` : "";
     const q = `${nameQuery} mimeType = 'application/vnd.google-apps.spreadsheet'`;
 
@@ -55,9 +49,9 @@ function getSheets(auth: OAuth2Client, query?: string): Promise<IFile[]> {
         }
         });
     });
-}
+};
 
-function getContent(auth: OAuth2Client, spreadsheetId: string, range = "Sheet1!A1:A1"): Promise<string[]> {
+const getContent = (auth: OAuth2Client) => (spreadsheetId: string, range = "Sheet1!A1:A1"): Promise<string[]> => {
   const sheets = google.sheets({version: "v4", auth});
   return new Promise((resolve, reject) => {
       sheets.spreadsheets.values.get({
@@ -76,9 +70,11 @@ function getContent(auth: OAuth2Client, spreadsheetId: string, range = "Sheet1!A
         }
       });
   });
-}
+};
 
-function writeContent(auth: OAuth2Client, spreadsheetId: string, range: string, values: string[][]): Promise<boolean> {
+const writeContent = (auth: OAuth2Client) =>
+    (spreadsheetId: string, range: string, values: string[][]): Promise<boolean> => {
+
     const sheets = google.sheets({version: "v4", auth});
     return new Promise((resolve, reject) => {
         sheets.spreadsheets.values.append({
@@ -98,4 +94,4 @@ function writeContent(auth: OAuth2Client, spreadsheetId: string, range: string, 
             }
         });
     });
-}
+};
