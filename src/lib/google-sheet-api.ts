@@ -1,8 +1,6 @@
 import debug from "debug";
-import fs from "fs";
 import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
-import readline from "readline";
 
 const logger = debug("google");
 
@@ -10,6 +8,7 @@ interface IFile {
     id: string;
     name: string;
 }
+
 interface ISheetClient {
     getContent: (sheetId: string, range?: string) => Promise<string[]>;
     getSheets: (query?: string) => Promise<IFile[]>;

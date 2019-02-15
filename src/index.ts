@@ -1,8 +1,8 @@
 import { SandboxPublicTokenCreateResponse, TokenResponse } from "plaid";
 import { client } from "./plaidClient";
 
-import { clientFactory } from "./google-api";
-import { getClient } from "./google-client";
+import { getClient } from "./lib/google-client";
+import { clientFactory } from "./lib/google-sheet-api";
 
 import moment from "moment";
 
