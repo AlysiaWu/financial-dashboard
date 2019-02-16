@@ -19,8 +19,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", (req, resp) => resp.render("../pages/index", {
-  env: config.plaid.env,
-  publicKey: config.plaid.publicKey,
+  PLAID_ENV: config.plaid.env,
+  PLAID_PUBLIC_KEY: config.plaid.publicKey,
 }));
 
 app.post("/get_access_token", (request, response, next) => {

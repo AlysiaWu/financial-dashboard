@@ -1,20 +1,14 @@
 <button id="link-button">Link Account</button>
-<script 
-src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
-<script 
-src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 <script type="text/javascript">
-(function($, env, key) {
+(function($) {
   var handler = Plaid.create({
     clientName: 'Plaid Quickstart',
-    env,
-    // Replace with your public_key from the Dashboard
-    key,
+    env: '<%= PLAID_ENV %>',
+    key: '<%= PLAID_PUBLIC_KEY %>',
     product: ['transactions'],
-    // Optional, use webhooks to get transaction and error updates
-    // webhook: 'https://requestb.in',
-    // Optional, specify a language to localize Link
-    language: 'en',
+    // Optional – use webhooks to get transaction and error updates
     onLoad: function() {
       // Optional, called when Link loads
     },
@@ -25,7 +19,7 @@ src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
       // Select Account view is enabled.
       $.post('/get_access_token', {
         public_token: public_token,
-      }, 'json');
+      });
     },
     onExit: function(err, metadata) {
       // The user exited the Link flow.
@@ -53,5 +47,5 @@ src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   $('#link-button').on('click', function(e) {
     handler.open();
   });
-})(jQuery, "<%=env%>", "<%=publicKey%>");
+})(jQuery);
 </script>
