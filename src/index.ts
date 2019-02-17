@@ -1,9 +1,13 @@
 import moment from "moment";
 
-import { clientFactory as getPlaidClient } from "./lib/plaid-client";
+import { default as PlaidClient } from "./lib/plaid-client";
 
 import { getClient } from "./lib/google-client";
 import { clientFactory } from "./lib/google-sheet-api";
+
+import { getPersistance } from "./persistance";
+
+export { ISheet } from "./lib/google-sheet-api";
 
 // tslint:disable:no-console
 
@@ -12,9 +16,17 @@ const SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
 ];
 
+export const getSheet = async () => {
+    const oAuthClient = await getClient(SCOPES);
+    const gClient = clientFactory(oAuthClient);
+    const files = await gClient.getSheets("Financial Dashboard");
+    return files.length === 1 ? files[0] : undefined;
+};
+
 const main = async () => {
     try {
-        const plaid = await getPlaidClient("access-development-834bb25a-091e-46d5-adee-8d658a5c772c");
+        const links = await getLinks();
+        const plaid = await PlaidClient(links[0].accessToken);
 
         // const results = await plaid.getItem(accessToken);
         // const results = await plaid.getTransactionsFor30Days(accessToken);
@@ -30,19 +42,29 @@ const main = async () => {
         ]);
         console.dir(accounts, {depth: null});
 
-        const oAuthClient = await getClient(SCOPES);
-        const gClient = clientFactory(oAuthClient);
-        const files = await gClient.getSheets("Financial Dashboard");
-        if (files.length === 1) {
-            const sheetId = files[0].id;
+        const file = await getSheet();
+        if (file) {
             // const content = await gClient.getContent(sheetId);
-            const result = await gClient.writeContent(sheetId, "balances!A1:A1", accounts);
+            // const result = await file.writeContent("balances!A1:A1", accounts);
+            const result = true;
             console.dir(result, {depth: null});
         } else {
             console.error("more than one file found or no files found");
         }
     } catch (err) {
         console.error(err);
+    }
+};
+
+const getLinks = async () => {
+    try {
+        const db = await getPersistance();
+        const store = db.getLinkStore();
+        const tokens = await store.getAll();
+        return tokens;
+    } catch (err) {
+        console.error(err);
+        return [];
     }
 };
 
