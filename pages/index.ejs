@@ -1,8 +1,7 @@
-<button id="link-button">Link Account</button>
-<script 
-src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
-<script 
-src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<button class="button button--is-default button--is-bright">Link Account</button>
+<link rel="stylesheet" type="text/css" href="https://threads.plaid.com/threads.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 <script type="text/javascript">
 (function($, env, key) {
   var handler = Plaid.create({
@@ -50,7 +49,7 @@ src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
     }
   });
 
-  $('#link-button').on('click', function(e) {
+  $('.button').on('click', function(e) {
     handler.open();
   });
 })(jQuery, "<%=env%>", "<%=publicKey%>");

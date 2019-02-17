@@ -19,16 +19,16 @@ export const getClient = () => new plaid.Client(
     plaidEnv,
 );
 
-export const clientFactory = async (accessToken: string) => {
+export default async (accessToken: string) => {
     const client = getClient();
     const token = await getAccessToken(client, accessToken);
 
-    return {
+    return Object.freeze({
         getAccounts: getAccounts(client, token),
         getItem: getItem(client, token),
         getPublicToken: client.exchangePublicToken,
         getTransactionsFor30Days: getTransactionsFor30Days(client, token),
-    };
+    });
 };
 
 const getAccessToken = async (client: plaid.Client, accessToken: string) => {
