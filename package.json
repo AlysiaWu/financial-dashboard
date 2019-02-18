@@ -5,8 +5,8 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "NODE_ENV=development node ./dist/index.js",
-    "start:sandbox": "NODE_ENV=sandbox node ./dist/index.js",
+    "start": "NODE_ENV=development nodemon ./dist/index.js",
+    "start:sandbox": "NODE_ENV=sandbox nodemon ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -32,6 +32,7 @@
     "google-auth-library": "^3.1.0",
     "googleapis": "^37.2.0",
     "moment": "^2.24.0",
+    "nodemon": "^1.18.10",
     "plaid": "^2.10.0"
   }
 }

@@ -1,50 +1,62 @@
-import moment from "moment";
+import bodyParser from "body-parser";
+import express from "express";
 
-import * as Plaid from "./lib/plaid-client";
+import { config } from "./config";
+import { getClient } from "./lib/plaid-client";
 
-import { default as PlaidClient } from "./lib/plaid-client";
+import { getPersistance } from "./persistance";
 
-import { getPersistance, IPersistance } from "./persistance";
-
-import { IBalance } from "./persistance/balance-store";
-import { ILink } from "./persistance/link-store";
-
-export { ISheet } from "./lib/google-sheet-api";
+import refreshBalances from "./balances";
 
 // tslint:disable:no-console
 
-const plaidAccountToBalance = (item: Plaid.Item, acct: Plaid.Account): IBalance => ({
-    balance: acct.balances.current,
-    date: moment().format("YYYY-MM-DD"),
-    id: acct.account_id,
-    institutionId: item.institution_id,
-    name: acct.name || "",
-    type: acct.type || "",
-} as IBalance);
+// We store the access_token in memory - in production, store it in a secure
+// persistent data store
+let ACCESS_TOKEN = null;
+let PUBLIC_TOKEN = null;
+let ITEM_ID = null;
 
-const saveLinkBalances = (db: IPersistance) => async (link: ILink) => {
-    const store = db.getBalanceStore();
+// Accept the public_token sent from Link
+const app = express();
+app.set("view engine", "ejs");
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-    const plaid = await PlaidClient(link.accessToken);
+app.get("/", (req, resp) => resp.render("../pages/index", {
+  env: config.plaid.env,
+  publicKey: config.plaid.publicKey,
+}));
 
-    // const results = await plaid.getItem(accessToken);
-    // const results = await plaid.getTransactionsFor30Days(accessToken);
-
-    const results = await plaid.getAccounts();
-    const accounts = results.accounts.map((acct) => plaidAccountToBalance(results.item, acct));
-    console.dir(accounts, {depth: null});
-    return store.save(accounts);
-};
-
-const main = async (db: IPersistance) => {
-    try {
-        const linkSaver = saveLinkBalances(db);
-        const links = await db.getLinkStore().getAll();
-        const linkPromises = links.map(linkSaver);
-        return Promise.all(linkPromises);
-    } catch (err) {
-        console.error(err);
+app.post("/get_access_token", (request, response) => {
+  PUBLIC_TOKEN = request.body.public_token;
+  console.dir(request.body, {depth: null});
+  console.log(`public_token: ${PUBLIC_TOKEN}`);
+  const client = getClient();
+  client.exchangePublicToken(PUBLIC_TOKEN, async (error, tokenResponse) => {
+    if (error != null) {
+      const msg = "Could not exchange public_token!";
+      console.log(`${msg}\n${JSON.stringify(error)}`);
+      return response.json({error: msg});
     }
-};
+    ACCESS_TOKEN = tokenResponse.access_token;
+    ITEM_ID = tokenResponse.item_id;
+    console.log("Access Token: " + ACCESS_TOKEN);
+    console.log("Item ID: " + ITEM_ID);
+    response.json({error: false});
 
-getPersistance().then(main).then(console.log).catch(console.error);
+    const db = await getPersistance();
+    db.getLinkStore().save({
+      accessToken: tokenResponse.access_token,
+      itemId: tokenResponse.item_id,
+    });
+  });
+});
+
+app.post("/refresh_balances", async (request, response) => {
+  const db = await getPersistance();
+  const results = refreshBalances(db);
+  response.json(results);
+});
+
+app.listen(8080);
+console.log("Server is listening on port 8080");

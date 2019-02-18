@@ -1,4 +1,5 @@
-<button class="button button--is-default button--is-bright">Link Account</button>
+<button class="button button--is-default button--is-bright" id="link">Link Account</button>
+<button class="button button--is-default button--is-bright" id="refresh">Refresh Balances</button>
 <link rel="stylesheet" type="text/css" href="https://threads.plaid.com/threads.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -22,9 +23,7 @@
       // The metadata object contains info about the institution the
       // user selected and the account ID or IDs, if the
       // Select Account view is enabled.
-      $.post('/get_access_token', {
-        public_token: public_token,
-      }, 'json');
+      $.post('/get_access_token', { public_token }, 'json');
     },
     onExit: function(err, metadata) {
       // The user exited the Link flow.
@@ -49,8 +48,12 @@
     }
   });
 
-  $('.button').on('click', function(e) {
+  $("#link").on("click", function(e) {
     handler.open();
+  });
+  $("#refresh").on("click", function(e) {
+    $("#refresh").attr("disabled", "disabled");
+    $.post('/refresh_balances');
   });
 })(jQuery, "<%=env%>", "<%=publicKey%>");
 </script>

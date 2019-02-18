@@ -21,10 +21,10 @@ export const saveRows = <T>(sheet: ISheet, tabName: string, encoder: RowEncoder<
     const write = (_: string[][]) => sheet.writeContent(`${tabName}!A1:A1`, _);
 
     if (Array.isArray(obj)) {
-        logger.log("got balance array");
+        logger("got balance array");
         return write(obj.map(encoder));
     } else {
-        logger.log("didn't get balance array");
+        logger("didn't get balance array");
         return write([encoder(obj)]);
     }
 };
