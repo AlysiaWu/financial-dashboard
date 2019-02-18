@@ -1,4 +1,7 @@
+import debug from "debug";
 import { ISheet } from "../lib/google-sheet-api";
+
+const logger = debug("store");
 
 export interface IStore<T> {
     getAll: () => Promise<T[]>;
@@ -18,12 +21,10 @@ export const saveRows = <T>(sheet: ISheet, tabName: string, encoder: RowEncoder<
     const write = (_: string[][]) => sheet.writeContent(`${tabName}!A1:A1`, _);
 
     if (Array.isArray(obj)) {
-        // tslint:disable-next-line:no-console
-        console.log("got balance array");
+        logger.log("got balance array");
         return write(obj.map(encoder));
     } else {
-        // tslint:disable-next-line:no-console
-        console.log("didn't get balance array");
+        logger.log("didn't get balance array");
         return write([encoder(obj)]);
     }
 };
