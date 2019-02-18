@@ -4,6 +4,8 @@ import express from "express";
 import { config } from "./config";
 import { getClient } from "./lib/plaid-client";
 
+import { getPersistance } from "./persistance";
+
 // tslint:disable:no-console
 
 // We store the access_token in memory - in production, store it in a secure
@@ -39,6 +41,14 @@ app.post("/get_access_token", (request, response, next) => {
     console.log("Access Token: " + ACCESS_TOKEN);
     console.log("Item ID: " + ITEM_ID);
     response.json({error: false});
+
+    getPersistance().then((db) => {
+      const store = db.getLinkStore();
+      store.save({
+        accessToken: tokenResponse.access_token,
+        itemId: tokenResponse.item_id,
+      });
+    });
   });
 });
 

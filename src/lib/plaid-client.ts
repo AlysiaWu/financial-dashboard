@@ -4,6 +4,8 @@ import { config } from "../config";
 
 import * as plaid from "plaid";
 
+export * from "plaid";
+
 const plaidDate = "YYYY-MM-DD";
 const now = moment();
 const today = now.format(plaidDate);
