@@ -24,9 +24,7 @@ const plaidAccountToBalance = (item: Plaid.Item, acct: Plaid.Account): IBalance 
     type: acct.type || "",
 } as IBalance);
 
-const saveLinkBalances = (db: IPersistance) => async (link: ILink) => {
-    const store = db.getBalanceStore();
-
+const getLinkBalances = (db: IPersistance) => async (link: ILink) => {
     const plaid = await PlaidClient(link.accessToken);
 
     // const results = await plaid.getItem(accessToken);
@@ -35,14 +33,16 @@ const saveLinkBalances = (db: IPersistance) => async (link: ILink) => {
     const results = await plaid.getAccounts();
     const accounts = results.accounts.map((acct) => plaidAccountToBalance(results.item, acct));
     logger(JSON.stringify(accounts));
-    return store.save(accounts);
+    return accounts;
 };
 
 export default async (db: IPersistance) => {
     try {
         const links = await db.getLinkStore().getAll();
-        const linkPromises = links.map(saveLinkBalances(db));
-        return Promise.all(linkPromises);
+        logger(`number of links: ${links.length}`);
+        const balances = await Promise.all(links.map(getLinkBalances(db)));
+        const allBalances = balances.reduce((prev, curr) => prev.concat(curr), []);
+        return db.getBalanceStore().save(allBalances);
     } catch (err) {
         logger(err);
     }
